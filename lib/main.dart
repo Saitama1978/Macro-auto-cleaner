@@ -1,11 +1,38 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:battery_plus/battery_plus.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:sensors_plus/sensors_plus.dart';
 
-// --- BACKGROUND WORKMANAGER TASK ---
+// --- MACRODROID-STYLE DATA STRUCTURE ---
+class MacroModel {
+  String id;
+  String name;
+  bool isEnabled;
+  String triggerCategory;
+  String triggerDetail;
+  String actionCategory;
+  String actionDetail;
+  String constraintDetail;
+
+  MacroModel({
+    required this.id,
+    required this.name,
+    this.isEnabled = true,
+    required this.triggerCategory,
+    required this.triggerDetail,
+    required this.actionCategory,
+    required this.actionDetail,
+    this.constraintDetail = "None (Always Run)",
+  });
+}
+
+// --- BACKGROUND WORKMANAGER DISPATCHER ---
 @pragma('vm:entry-point')
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
@@ -15,11 +42,7 @@ void callbackDispatcher() {
         if (await downloadsDir.exists()) {
           final List<FileSystemEntity> entities = downloadsDir.listSync();
           for (var entity in entities) {
-            if (entity is File) {
-              await entity.delete();
-            } else if (entity is Directory) {
-              await entity.delete(recursive: true);
-            }
+            await entity.delete(recursive: true);
           }
         }
       } catch (e) {
@@ -34,7 +57,6 @@ void callbackDispatcher() {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize WorkManager for background automation
   await Workmanager().initialize(
     callbackDispatcher,
     isInDebugMode: false,
@@ -43,7 +65,7 @@ void main() async {
   runApp(
     ChangeNotifierProvider(
       create: (_) => ThemeProvider(),
-      child: const AutoCleanApp(),
+      child: const AutomationApp(),
     ),
   );
 }
@@ -72,22 +94,22 @@ class ThemeProvider extends ChangeNotifier {
 }
 
 // --- MAIN APPLICATION ---
-class AutoCleanApp extends StatelessWidget {
-  const AutoCleanApp({super.key});
+class AutomationApp extends StatelessWidget {
+  const AutomationApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return MaterialApp(
-      title: 'AutoClean Automation',
+      title: 'AutoClean & Automation Engine',
       debugShowCheckedModeBanner: false,
       themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
       theme: ThemeData(
         brightness: Brightness.light,
         primarySwatch: Colors.deepPurple,
         useMaterial3: true,
-        scaffoldBackgroundColor: const Color(0xFFF5F5F5),
+        scaffoldBackgroundColor: const Color(0xFFF3F4F6),
       ),
       darkTheme: ThemeData(
         brightness: Brightness.dark,
@@ -95,31 +117,48 @@ class AutoCleanApp extends StatelessWidget {
         useMaterial3: true,
         scaffoldBackgroundColor: const Color(0xFF121212),
       ),
-      home: const MainHomeScreen(),
+      home: const MacroDroidDashboard(),
     );
   }
 }
 
-// --- MAIN HOME SCREEN ---
-class MainHomeScreen extends StatefulWidget {
-  const MainHomeScreen({super.key});
+// --- MACRODROID STYLE DASHBOARD ---
+class MacroDroidDashboard extends StatefulWidget {
+  const MacroDroidDashboard({super.key});
 
   @override
-  State<MainHomeScreen> createState() => _MainHomeScreenState();
+  State<MacroDroidDashboard> createState() => _MacroDroidDashboardState();
 }
 
-class _MainHomeScreenState extends State<MainHomeScreen> {
-  final List<Map<String, String>> _activeMacros = [
-    {
-      "title": "Daily Downloads Cleaner",
-      "trigger": "Schedule: Every 24 Hours",
-      "action": "Delete all files in /Download"
-    },
-    {
-      "title": "Clear Temp Files on Boot",
-      "trigger": "Event: Device Boot Up",
-      "action": "Clear App Cache & Temp Files"
-    }
+class _MacroDroidDashboardState extends State<MacroDroidDashboard> {
+  final List<MacroModel> _macros = [
+    MacroModel(
+      id: "1",
+      name: "Daily Downloads Cleaner",
+      triggerCategory: "Date / Time",
+      triggerDetail: "Every 24 Hours Schedule",
+      actionCategory: "File Operation",
+      actionDetail: "Delete /Download Folder Contents",
+      constraintDetail: "Only when Battery > 20%",
+    ),
+    MacroModel(
+      id: "2",
+      name: "Wi-Fi Storage Sentinel",
+      triggerCategory: "Connectivity",
+      triggerDetail: "Connected to Home Wi-Fi",
+      actionCategory: "Notification / Alert",
+      actionDetail: "Show Storage Warning Notification",
+      constraintDetail: "Time between 8:00 AM - 10:00 PM",
+    ),
+    MacroModel(
+      id: "3",
+      name: "Shake to Clean Cache",
+      triggerCategory: "Sensors / Motion",
+      triggerDetail: "Device Shake Detected",
+      actionCategory: "System Operations",
+      actionDetail: "Clear Temp Cache Files",
+      constraintDetail: "Device Unlocked",
+    ),
   ];
 
   @override
@@ -132,49 +171,8 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
     if (Platform.isAndroid) {
       await Permission.storage.request();
       await Permission.manageExternalStorage.request();
+      await Permission.notification.request();
     }
-  }
-
-  Future<void> _manualCleanDownloads() async {
-    try {
-      final downloadsDir = Directory('/storage/emulated/0/Download');
-      if (await downloadsDir.exists()) {
-        final List<FileSystemEntity> entities = downloadsDir.listSync();
-        int deletedCount = 0;
-        for (var entity in entities) {
-          await entity.delete(recursive: true);
-          deletedCount++;
-        }
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Nalinis na! $deletedCount files/folders ang nabura.')),
-          );
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Hindi nahanap ang Downloads folder.')),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: Kailangan ng Storage Permission ($e)')),
-        );
-      }
-    }
-  }
-
-  void _scheduleDailyCleaner() {
-    Workmanager().registerPeriodicTask(
-      "1",
-      "autoCleanTask",
-      frequency: const Duration(hours: 24),
-    );
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Naka-schedule na ang auto-clean araw-araw!')),
-    );
   }
 
   @override
@@ -183,16 +181,14 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AutoClean & Automation'),
+        title: const Text('Automation Engine', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           Row(
             children: [
               Icon(themeProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode),
               Switch(
                 value: themeProvider.isDarkMode,
-                onChanged: (value) {
-                  themeProvider.toggleTheme(value);
-                },
+                onChanged: (value) => themeProvider.toggleTheme(value),
               ),
             ],
           ),
@@ -203,71 +199,120 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- ACTION BUTTONS ---
-            Card(
-              elevation: 4,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    const Text(
-                      'Quick Actions',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 12),
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(45),
-                        backgroundColor: Colors.redAccent,
-                        foregroundColor: Colors.white,
-                      ),
-                      icon: const Icon(Icons.delete_forever),
-                      label: const Text('BURAHIN ANG DOWNLOADS NGAYON'),
-                      onPressed: _manualCleanDownloads,
-                    ),
-                    const SizedBox(height: 10),
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(45),
-                      ),
-                      icon: const Icon(Icons.schedule),
-                      label: const Text('I-AUTOMATE ARAW-ARAW (WorkManager)'),
-                      onPressed: _scheduleDailyCleaner,
-                    ),
-                  ],
+            // --- GRID DASHBOARD TILES (MACRODROID STYLE) ---
+            GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 1.3,
+              children: [
+                _buildDashboardTile(
+                  title: 'Macros',
+                  subtitle: '${_macros.length} Active',
+                  icon: Icons.list_alt,
+                  color: Colors.blueAccent,
+                  onTap: () {},
                 ),
-              ),
+                _buildDashboardTile(
+                  title: 'Add Macro',
+                  subtitle: 'Create Custom Wizard',
+                  icon: Icons.add_circle_outline,
+                  color: Colors.redAccent,
+                  onTap: () => _showAddMacroWizard(),
+                ),
+                _buildDashboardTile(
+                  title: 'Templates',
+                  subtitle: 'Explore Community',
+                  icon: Icons.dashboard_customize,
+                  color: Colors.orangeAccent,
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Template Store loaded!')),
+                    );
+                  },
+                ),
+                _buildDashboardTile(
+                  title: 'Variables',
+                  subtitle: 'User & System Data',
+                  icon: Icons.code,
+                  color: Colors.green,
+                  onTap: () {},
+                ),
+              ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
 
-            // --- MACROS LIST SECTION ---
-            const Text(
-              'Active Automation Macros',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            // --- ACTIVE MACROS SECTION ---
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Configured Macros',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                TextChip(label: '${_macros.length} Enabled'),
+              ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
+
             ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: _activeMacros.length,
+              itemCount: _macros.length,
               itemBuilder: (context, index) {
-                final macro = _activeMacros[index];
+                final macro = _macros[index];
                 return Card(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  child: ListTile(
-                    leading: const CircleAvatar(
-                      child: Icon(Icons.bolt),
-                    ),
-                    title: Text(macro['title']!, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('Trigger: ${macro['trigger']}\nAction: ${macro['action']}'),
-                    isThreeLine: true,
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.grey),
-                      onPressed: () {
-                        setState(() {
-                          _activeMacros.removeAt(index);
-                        });
-                      },
+                  elevation: 2,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              macro.name,
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                            Switch(
+                              value: macro.isEnabled,
+                              onChanged: (val) {
+                                setState(() {
+                                  macro.isEnabled = val;
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                        const Divider(),
+                        // TRIGGER BLOCK (RED)
+                        _buildMacroBlock(
+                          icon: Icons.bolt,
+                          color: Colors.redAccent,
+                          title: 'TRIGGER: ${macro.triggerCategory}',
+                          subtitle: macro.triggerDetail,
+                        ),
+                        const SizedBox(height: 6),
+                        // ACTION BLOCK (BLUE)
+                        _buildMacroBlock(
+                          icon: Icons.play_arrow,
+                          color: Colors.blueAccent,
+                          title: 'ACTION: ${macro.actionCategory}',
+                          subtitle: macro.actionDetail,
+                        ),
+                        const SizedBox(height: 6),
+                        // CONSTRAINT BLOCK (GREEN)
+                        _buildMacroBlock(
+                          icon: Icons.filter_alt,
+                          color: Colors.green,
+                          title: 'CONSTRAINT',
+                          subtitle: macro.constraintDetail,
+                        ),
+                      ],
                     ),
                   ),
                 );
@@ -277,78 +322,217 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
         ),
       ),
 
-      // --- ADD MACRO FAB ---
+      // --- FLOATING ACTION BUTTON ---
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          _showAddMacroDialog();
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('Add Macro'),
+        onPressed: () => _showAddMacroWizard(),
+        backgroundColor: Colors.deepPurple,
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text('Add Macro Wizard', style: TextStyle(color: Colors.white)),
       ),
 
-      // --- DEVELOPER FOOTER ---
+      // --- DEVELOPER CREDITS ---
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(12),
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
         child: const Text(
           'Developer: Renante Fullo | Open-Source Automation Engine',
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
         ),
       ),
     );
   }
 
-  void _showAddMacroDialog() {
+  // DASHBOARD TILE BUILDER
+  Widget _buildDashboardTile({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Ink(
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.4), width: 1.5),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: color, size: 32),
+              const SizedBox(height: 8),
+              Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              Text(subtitle, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // MACRO BLOCK BUILDER
+  Widget _buildMacroBlock({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String subtitle,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border(left: BorderSide(color: color, width: 4)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 11)),
+                Text(subtitle, style: const TextStyle(fontSize: 13)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ADD MACRO BUILDER WIZARD DIALOG
+  void _showAddMacroWizard() {
     String name = "";
+    String selectedTriggerCategory = "Battery / Power";
+    String selectedTriggerDetail = "Battery Level <= 20%";
+    String selectedActionCategory = "File Operation";
+    String selectedActionDetail = "Delete Downloads Folder";
+    String selectedConstraint = "Only when connected to Wi-Fi";
+
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Gumawa ng Bagong Macro'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                decoration: const InputDecoration(labelText: 'Macro Name'),
-                onChanged: (val) => name = val,
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Macro Creation Wizard'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      decoration: const InputDecoration(
+                        labelText: 'Macro Name',
+                        hintText: 'e.g. Clean Downloads on Low Battery',
+                      ),
+                      onChanged: (val) => name = val,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // TRIGGER SELECTION (RED)
+                    const Text('Select Trigger', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.redAccent)),
+                    DropdownButton<String>(
+                      isExpanded: true,
+                      value: selectedTriggerDetail,
+                      items: const [
+                        DropdownMenuItem(value: "Battery Level <= 20%", child: Text("Battery Level <= 20%")),
+                        DropdownMenuItem(value: "Connected to Wi-Fi", child: Text("Connected to Wi-Fi")),
+                        DropdownMenuItem(value: "Device Shake Motion", child: Text("Device Shake Motion")),
+                        DropdownMenuItem(value: "Schedule: Every 24 Hours", child: Text("Schedule: Every 24 Hours")),
+                      ],
+                      onChanged: (val) => setDialogState(() => selectedTriggerDetail = val!),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // ACTION SELECTION (BLUE)
+                    const Text('Select Action', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueAccent)),
+                    DropdownButton<String>(
+                      isExpanded: true,
+                      value: selectedActionDetail,
+                      items: const [
+                        DropdownMenuItem(value: "Delete Downloads Folder", child: Text("Delete Downloads Folder")),
+                        DropdownMenuItem(value: "Display Local Notification", child: Text("Display Local Notification")),
+                        DropdownMenuItem(value: "Vibrate Device", child: Text("Vibrate Device")),
+                      ],
+                      onChanged: (val) => setDialogState(() => selectedActionDetail = val!),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // CONSTRAINT SELECTION (GREEN)
+                    const Text('Select Constraint', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+                    DropdownButton<String>(
+                      isExpanded: true,
+                      value: selectedConstraint,
+                      items: const [
+                        DropdownMenuItem(value: "Only when connected to Wi-Fi", child: Text("Only when connected to Wi-Fi")),
+                        DropdownMenuItem(value: "Time between 8 AM - 10 PM", child: Text("Time between 8 AM - 10 PM")),
+                        DropdownMenuItem(value: "None (Always Run)", child: Text("None (Always Run)")),
+                      ],
+                      onChanged: (val) => setDialogState(() => selectedConstraint = val!),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 10),
-              const ListTile(
-                leading: Icon(Icons.input),
-                title: Text('Trigger'),
-                subtitle: Text('Default: Daily Timer (24h)'),
-              ),
-              const ListTile(
-                leading: Icon(Icons.play_arrow),
-                title: Text('Action'),
-                subtitle: Text('Default: Delete Downloads Folder'),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (name.isNotEmpty) {
-                  setState(() {
-                    _activeMacros.add({
-                      "title": name,
-                      "trigger": "Schedule: Daily",
-                      "action": "Delete Downloads Folder"
-                    });
-                  });
-                }
-                Navigator.pop(context);
-              },
-              child: const Text('Save Macro'),
-            ),
-          ],
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    if (name.isNotEmpty) {
+                      setState(() {
+                        _macros.add(
+                          MacroModel(
+                            id: DateTime.now().millisecondsSinceEpoch.toString(),
+                            name: name,
+                            triggerCategory: "Hardware / Event",
+                            triggerDetail: selectedTriggerDetail,
+                            actionCategory: selectedActionCategory,
+                            actionDetail: selectedActionDetail,
+                            constraintDetail: selectedConstraint,
+                          ),
+                        );
+                      });
+                    }
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Save Macro'),
+                ),
+              ],
+            );
+          },
         );
       },
+    );
+  }
+}
+
+class TextChip extends StatelessWidget {
+  final String label;
+  const TextChip({super.key, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.deepPurple.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(color: Colors.deepPurple, fontSize: 12, fontWeight: FontWeight.bold),
+      ),
     );
   }
 }
