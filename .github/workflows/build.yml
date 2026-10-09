@@ -31,8 +31,10 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Auto-generate Clean Android Project Files
-        run: flutter create . --org com.renantefullo --project-name macro_auto_cleaner
+      - name: Clean Old Android Files & Re-create Project
+        run: |
+          rm -rf android
+          flutter create . --org com.renantefullo --project-name macro_auto_cleaner
 
       - name: Install Dependencies
         run: flutter pub get
