@@ -1,5 +1,5 @@
-name: autoclean_automation
-description: "Automation & Auto Clean App created by Renante Fullo"
+name: macro_auto_cleaner
+description: "Macro Auto Cleaner App developed by Renante Fullo"
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -12,14 +12,33 @@ dependencies:
   provider: ^6.1.1
   shared_preferences: ^2.2.2
   workmanager: ^0.5.1
-  path_provider: ^2.1.2
   permission_handler: ^11.3.0
+  battery_plus: ^6.0.0
+  connectivity_plus: ^6.0.0
+  flutter_local_notifications: ^17.0.0
+  sensors_plus: ^5.0.0
   cupertino_icons: ^1.0.6
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+  # Package para sa awtomatikong pag-set up ng App Icon
+  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
+
+  # Asset declaration para sa iyong app icon / logo
+  assets:
+    - assets/icon/app_icon.png
+
+# Configuration para sa Launcher Icon (Android & iOS)
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon/app_icon.png"
+  min_sdk_android: 21
+  web:
+    generate: true
+    image_path: "assets/icon/app_icon.png"
