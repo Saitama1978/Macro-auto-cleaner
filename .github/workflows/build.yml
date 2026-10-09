@@ -77,9 +77,17 @@ jobs:
                   f.write(content)
           '
 
-      - name: Update Workmanager Package & Install Dependencies
+      - name: Update Dependencies & Install
         run: |
-          flutter pub add workmanager:^0.5.3
+          # Palitan ang luma at sirang workmanager version sa pubspec.yaml
+          python3 -c '
+          with open("pubspec.yaml", "r") as f:
+              content = f.read()
+          content = content.replace("workmanager: ^0.5.2", "workmanager: ^0.5.3")
+          content = content.replace("workmanager: 0.5.2", "workmanager: ^0.5.3")
+          with open("pubspec.yaml", "w") as f:
+              f.write(content)
+          '
           flutter pub get
 
       - name: Build Android APK
