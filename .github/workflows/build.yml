@@ -31,12 +31,12 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Re-create Project & Configure Desugaring
+      - name: Re-create Project & Configure Gradle/Desugaring
         run: |
           rm -rf android
           flutter create . --org com.renantefullo --project-name macro_auto_cleaner
           
-          # Inject Desugaring & Java 8 setup
+          # Inject Desugaring & Kotlin Compatibility
           python3 -c '
           import os
 
@@ -74,4 +74,10 @@ jobs:
         run: flutter pub get
 
       - name: Build Android APK
-        run: flutter build apk --release --no-tree-shake-icons -Pextra-front-end-options=--enable-v2-embedded-types
+        run: flutter build apk --release --no-tree-shake-icons
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AutoClean-APK-RenanteFullo
+          path: build/app/outputs/flutter-apk/app-release.apk
