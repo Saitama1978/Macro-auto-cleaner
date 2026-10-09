@@ -77,16 +77,16 @@ jobs:
                   f.write(content)
           '
 
-      - name: Update Dependencies & Install
+      - name: Update Workmanager Version in Pubspec
         run: |
-          # Palitan ang luma at sirang workmanager version sa pubspec.yaml
           python3 -c '
+          import re
           with open("pubspec.yaml", "r") as f:
               content = f.read()
-          content = content.replace("workmanager: ^0.5.2", "workmanager: ^0.5.3")
-          content = content.replace("workmanager: 0.5.2", "workmanager: ^0.5.3")
+          # Palitan ang anumang bersyon ng workmanager ng ^0.5.3
+          new_content = re.sub(r"workmanager:\s*.*", "workmanager: ^0.5.3", content)
           with open("pubspec.yaml", "w") as f:
-              f.write(content)
+              f.write(new_content)
           '
           flutter pub get
 
