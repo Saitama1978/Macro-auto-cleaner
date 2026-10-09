@@ -5,11 +5,8 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:battery_plus/battery_plus.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:sensors_plus/sensors_plus.dart';
 
-// --- MACRODROID-STYLE DATA STRUCTURE ---
+// --- DATA STRUCTURE FOR MACRO AUTO CLEANER ---
 class MacroModel {
   String id;
   String name;
@@ -36,7 +33,7 @@ class MacroModel {
 @pragma('vm:entry-point')
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
-    if (task == "autoCleanTask") {
+    if (task == "macroAutoCleanTask") {
       try {
         final downloadsDir = Directory('/storage/emulated/0/Download');
         if (await downloadsDir.exists()) {
@@ -65,7 +62,7 @@ void main() async {
   runApp(
     ChangeNotifierProvider(
       create: (_) => ThemeProvider(),
-      child: const AutomationApp(),
+      child: const MacroAutoCleanerApp(),
     ),
   );
 }
@@ -93,16 +90,16 @@ class ThemeProvider extends ChangeNotifier {
   }
 }
 
-// --- MAIN APPLICATION ---
-class AutomationApp extends StatelessWidget {
-  const AutomationApp({super.key});
+// --- MAIN APPLICATION CLASS ---
+class MacroAutoCleanerApp extends StatelessWidget {
+  const MacroAutoCleanerApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return MaterialApp(
-      title: 'AutoClean & Automation Engine',
+      title: 'Macro Auto Cleaner',
       debugShowCheckedModeBanner: false,
       themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
       theme: ThemeData(
@@ -117,20 +114,20 @@ class AutomationApp extends StatelessWidget {
         useMaterial3: true,
         scaffoldBackgroundColor: const Color(0xFF121212),
       ),
-      home: const MacroDroidDashboard(),
+      home: const MacroAutoCleanerDashboard(),
     );
   }
 }
 
-// --- MACRODROID STYLE DASHBOARD ---
-class MacroDroidDashboard extends StatefulWidget {
-  const MacroDroidDashboard({super.key});
+// --- MAIN DASHBOARD SCREEN ---
+class MacroAutoCleanerDashboard extends StatefulWidget {
+  const MacroAutoCleanerDashboard({super.key});
 
   @override
-  State<MacroDroidDashboard> createState() => _MacroDroidDashboardState();
+  State<MacroAutoCleanerDashboard> createState() => _MacroAutoCleanerDashboardState();
 }
 
-class _MacroDroidDashboardState extends State<MacroDroidDashboard> {
+class _MacroAutoCleanerDashboardState extends State<MacroAutoCleanerDashboard> {
   final List<MacroModel> _macros = [
     MacroModel(
       id: "1",
@@ -181,7 +178,7 @@ class _MacroDroidDashboardState extends State<MacroDroidDashboard> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Automation Engine', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Macro Auto Cleaner', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           Row(
             children: [
@@ -199,7 +196,7 @@ class _MacroDroidDashboardState extends State<MacroDroidDashboard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- GRID DASHBOARD TILES (MACRODROID STYLE) ---
+            // --- DASHBOARD TILES ---
             GridView.count(
               crossAxisCount: 2,
               shrinkWrap: true,
@@ -217,25 +214,25 @@ class _MacroDroidDashboardState extends State<MacroDroidDashboard> {
                 ),
                 _buildDashboardTile(
                   title: 'Add Macro',
-                  subtitle: 'Create Custom Wizard',
+                  subtitle: 'Cleaner Wizard',
                   icon: Icons.add_circle_outline,
                   color: Colors.redAccent,
                   onTap: () => _showAddMacroWizard(),
                 ),
                 _buildDashboardTile(
                   title: 'Templates',
-                  subtitle: 'Explore Community',
+                  subtitle: 'Explore Presets',
                   icon: Icons.dashboard_customize,
                   color: Colors.orangeAccent,
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Template Store loaded!')),
+                      const SnackBar(content: Text('Cleaner Templates loaded!')),
                     );
                   },
                 ),
                 _buildDashboardTile(
                   title: 'Variables',
-                  subtitle: 'User & System Data',
+                  subtitle: 'Storage & System Info',
                   icon: Icons.code,
                   color: Colors.green,
                   onTap: () {},
@@ -249,10 +246,10 @@ class _MacroDroidDashboardState extends State<MacroDroidDashboard> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'Configured Macros',
+                  'Configured Cleaner Macros',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-                TextChip(label: '${_macros.length} Enabled'),
+                TextChip(label: '${_macros.length} Active'),
               ],
             ),
             const SizedBox(height: 12),
@@ -289,7 +286,6 @@ class _MacroDroidDashboardState extends State<MacroDroidDashboard> {
                           ],
                         ),
                         const Divider(),
-                        // TRIGGER BLOCK (RED)
                         _buildMacroBlock(
                           icon: Icons.bolt,
                           color: Colors.redAccent,
@@ -297,7 +293,6 @@ class _MacroDroidDashboardState extends State<MacroDroidDashboard> {
                           subtitle: macro.triggerDetail,
                         ),
                         const SizedBox(height: 6),
-                        // ACTION BLOCK (BLUE)
                         _buildMacroBlock(
                           icon: Icons.play_arrow,
                           color: Colors.blueAccent,
@@ -305,7 +300,6 @@ class _MacroDroidDashboardState extends State<MacroDroidDashboard> {
                           subtitle: macro.actionDetail,
                         ),
                         const SizedBox(height: 6),
-                        // CONSTRAINT BLOCK (GREEN)
                         _buildMacroBlock(
                           icon: Icons.filter_alt,
                           color: Colors.green,
@@ -327,15 +321,15 @@ class _MacroDroidDashboardState extends State<MacroDroidDashboard> {
         onPressed: () => _showAddMacroWizard(),
         backgroundColor: Colors.deepPurple,
         icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('Add Macro Wizard', style: TextStyle(color: Colors.white)),
+        label: const Text('Add Cleaner Macro', style: TextStyle(color: Colors.white)),
       ),
 
-      // --- DEVELOPER CREDITS ---
+      // --- DEVELOPER FOOTER ---
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(12),
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
         child: const Text(
-          'Developer: Renante Fullo | Open-Source Automation Engine',
+          'Macro Auto Cleaner | Developed by Renante Fullo',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
         ),
@@ -343,7 +337,6 @@ class _MacroDroidDashboardState extends State<MacroDroidDashboard> {
     );
   }
 
-  // DASHBOARD TILE BUILDER
   Widget _buildDashboardTile({
     required String title,
     required String subtitle,
@@ -377,7 +370,6 @@ class _MacroDroidDashboardState extends State<MacroDroidDashboard> {
     );
   }
 
-  // MACRO BLOCK BUILDER
   Widget _buildMacroBlock({
     required IconData icon,
     required Color color,
@@ -409,12 +401,9 @@ class _MacroDroidDashboardState extends State<MacroDroidDashboard> {
     );
   }
 
-  // ADD MACRO BUILDER WIZARD DIALOG
   void _showAddMacroWizard() {
     String name = "";
-    String selectedTriggerCategory = "Battery / Power";
     String selectedTriggerDetail = "Battery Level <= 20%";
-    String selectedActionCategory = "File Operation";
     String selectedActionDetail = "Delete Downloads Folder";
     String selectedConstraint = "Only when connected to Wi-Fi";
 
@@ -424,7 +413,7 @@ class _MacroDroidDashboardState extends State<MacroDroidDashboard> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: const Text('Macro Creation Wizard'),
+              title: const Text('Add Macro Auto Cleaner'),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -432,13 +421,11 @@ class _MacroDroidDashboardState extends State<MacroDroidDashboard> {
                     TextField(
                       decoration: const InputDecoration(
                         labelText: 'Macro Name',
-                        hintText: 'e.g. Clean Downloads on Low Battery',
+                        hintText: 'e.g. Auto Clean on Low Battery',
                       ),
                       onChanged: (val) => name = val,
                     ),
                     const SizedBox(height: 16),
-
-                    // TRIGGER SELECTION (RED)
                     const Text('Select Trigger', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.redAccent)),
                     DropdownButton<String>(
                       isExpanded: true,
@@ -452,8 +439,6 @@ class _MacroDroidDashboardState extends State<MacroDroidDashboard> {
                       onChanged: (val) => setDialogState(() => selectedTriggerDetail = val!),
                     ),
                     const SizedBox(height: 12),
-
-                    // ACTION SELECTION (BLUE)
                     const Text('Select Action', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueAccent)),
                     DropdownButton<String>(
                       isExpanded: true,
@@ -461,13 +446,11 @@ class _MacroDroidDashboardState extends State<MacroDroidDashboard> {
                       items: const [
                         DropdownMenuItem(value: "Delete Downloads Folder", child: Text("Delete Downloads Folder")),
                         DropdownMenuItem(value: "Display Local Notification", child: Text("Display Local Notification")),
-                        DropdownMenuItem(value: "Vibrate Device", child: Text("Vibrate Device")),
+                        DropdownMenuItem(value: "Clear Temporary Cache", child: Text("Clear Temporary Cache")),
                       ],
                       onChanged: (val) => setDialogState(() => selectedActionDetail = val!),
                     ),
                     const SizedBox(height: 12),
-
-                    // CONSTRAINT SELECTION (GREEN)
                     const Text('Select Constraint', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
                     DropdownButton<String>(
                       isExpanded: true,
@@ -497,7 +480,7 @@ class _MacroDroidDashboardState extends State<MacroDroidDashboard> {
                             name: name,
                             triggerCategory: "Hardware / Event",
                             triggerDetail: selectedTriggerDetail,
-                            actionCategory: selectedActionCategory,
+                            actionCategory: "Storage Operation",
                             actionDetail: selectedActionDetail,
                             constraintDetail: selectedConstraint,
                           ),
