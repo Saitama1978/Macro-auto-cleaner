@@ -36,9 +36,30 @@ jobs:
           rm -rf android
           flutter create . --org com.renantefullo --project-name macro_auto_cleaner
           
-          # Inject coreLibraryDesugaring & Java 8 options into build.gradle
-          sed -i '/compileOptions {/a \        coreLibraryDesugaringEnabled true' android/app/build.gradle
-          sed -i '/dependencies {/a \    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.0.4"' android/app/build.gradle
+          # Configure Desugaring via Python to support Kotlin Script (.kts) and Groovy (.gradle)
+          python3 -c '
+          import os
+
+          path_kts = "android/app/build.gradle.kts"
+          path_groovy = "android/app/build.gradle"
+
+          if os.path.exists(path_kts):
+              with open(path_kts, "r") as f:
+                  content = f.read()
+              if "isCoreLibraryDesugaringEnabled" not in content:
+                  content = content.replace("compileOptions {", "compileOptions {\n        isCoreLibraryDesugaringEnabled = true")
+                  content = content.replace("dependencies {", "dependencies {\n    coreLibraryDesugaring(\"com.android.tools:desugar_jdk_libs:2.0.4\")")
+                  with open(path_kts, "w") as f:
+                      f.write(content)
+          elif os.path.exists(path_groovy):
+              with open(path_groovy, "r") as f:
+                  content = f.read()
+              if "coreLibraryDesugaringEnabled" not in content:
+                  content = content.replace("compileOptions {", "compileOptions {\n        coreLibraryDesugaringEnabled true")
+                  content = content.replace("dependencies {", "dependencies {\n    coreLibraryDesugaring \"com.android.tools:desugar_jdk_libs:2.0.4\"")
+                  with open(path_groovy, "w") as f:
+                      f.write(content)
+          '
 
       - name: Install Dependencies
         run: flutter pub get
