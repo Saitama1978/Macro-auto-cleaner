@@ -77,8 +77,10 @@ jobs:
                   f.write(content)
           '
 
-      - name: Install Dependencies
-        run: flutter pub get
+      - name: Update Workmanager Package & Install Dependencies
+        run: |
+          flutter pub add workmanager:^0.5.3
+          flutter pub get
 
       - name: Build Android APK
         run: flutter build apk --release --no-tree-shake-icons
