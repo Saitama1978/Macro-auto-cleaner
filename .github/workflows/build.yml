@@ -47,14 +47,10 @@ jobs:
                   content = f.read()
               
               if "isCoreLibraryDesugaringEnabled" not in content:
-                  content = content.replace("compileOptions {", "compileOptions {\n        isCoreLibraryDesugaringEnabled = true")
+                  content = content.replace("compileOptions {", "compileOptions {\n        isCoreLibraryDesugaringEnabled = true\n        sourceCompatibility = JavaVersion.VERSION_1_8\n        targetCompatibility = JavaVersion.VERSION_1_8")
               
-              desugar_dep = "coreLibraryDesugaring(\"com.android.tools:desugar_jdk_libs:2.0.4\")"
-              if desugar_dep not in content:
-                  if "dependencies {" in content:
-                      content = content.replace("dependencies {", f"dependencies {{\n    {desugar_dep}")
-                  else:
-                      content += f"\ndependencies {{\n    {desugar_dep}\n}}\n"
+              if "coreLibraryDesugaring" not in content:
+                  content += "\ndependencies {\n    coreLibraryDesugaring(\"com.android.tools:desugar_jdk_libs:2.0.4\")\n}\n"
                       
               with open(path_kts, "w") as f:
                   f.write(content)
@@ -64,31 +60,17 @@ jobs:
                   content = f.read()
               
               if "coreLibraryDesugaringEnabled" not in content:
-                  content = content.replace("compileOptions {", "compileOptions {\n        coreLibraryDesugaringEnabled true")
+                  content = content.replace("compileOptions {", "compileOptions {\n        coreLibraryDesugaringEnabled true\n        sourceCompatibility JavaVersion.VERSION_1_8\n        targetCompatibility JavaVersion.VERSION_1_8")
               
-              desugar_dep = "coreLibraryDesugaring \"com.android.tools:desugar_jdk_libs:2.0.4\""
-              if desugar_dep not in content:
-                  if "dependencies {" in content:
-                      content = content.replace("dependencies {", f"dependencies {{\n    {desugar_dep}")
-                  else:
-                      content += f"\ndependencies {{\n    {desugar_dep}\n}}\n"
+              if "coreLibraryDesugaring" not in content:
+                  content += "\ndependencies {\n    coreLibraryDesugaring \"com.android.tools:desugar_jdk_libs:2.0.4\"\n}\n"
                       
               with open(path_groovy, "w") as f:
                   f.write(content)
           '
 
-      - name: Update Workmanager Version in Pubspec
-        run: |
-          python3 -c '
-          import re
-          with open("pubspec.yaml", "r") as f:
-              content = f.read()
-          # Palitan ang anumang bersyon ng workmanager ng ^0.5.3
-          new_content = re.sub(r"workmanager:\s*.*", "workmanager: ^0.5.3", content)
-          with open("pubspec.yaml", "w") as f:
-              f.write(new_content)
-          '
-          flutter pub get
+      - name: Install Dependencies
+        run: flutter pub get
 
       - name: Build Android APK
         run: flutter build apk --release --no-tree-shake-icons
