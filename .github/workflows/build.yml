@@ -31,11 +31,12 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Re-create Project & Configure Desugaring
+      - name: Re-create Project & Fix Workmanager Compatibility
         run: |
           rm -rf android
           flutter create . --org com.renantefullo --project-name macro_auto_cleaner
           
+          # Inject Desugaring & Java 8 setup
           python3 -c '
           import os
 
@@ -67,6 +68,20 @@ jobs:
                       
               with open(path_groovy, "w") as f:
                   f.write(content)
+          '
+
+          # Inject dependency_override para sa workmanager
+          python3 -c '
+          with open("pubspec.yaml", "r") as f:
+              content = f.read()
+          
+          override_block = "\ndependency_overrides:\n  workmanager:\n    git:\n      url: https://github.com/fluttercommunity/flutter_workmanager.git\n      ref: main\n"
+          
+          if "dependency_overrides:" not in content:
+              content += override_block
+          
+          with open("pubspec.yaml", "w") as f:
+              f.write(content)
           '
 
       - name: Install Dependencies
