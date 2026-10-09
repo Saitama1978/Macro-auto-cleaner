@@ -31,10 +31,14 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Clean Old Android Files & Re-create Project
+      - name: Re-create Project & Configure Desugaring
         run: |
           rm -rf android
           flutter create . --org com.renantefullo --project-name macro_auto_cleaner
+          
+          # Inject coreLibraryDesugaring & Java 8 options into build.gradle
+          sed -i '/compileOptions {/a \        coreLibraryDesugaringEnabled true' android/app/build.gradle
+          sed -i '/dependencies {/a \    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.0.4"' android/app/build.gradle
 
       - name: Install Dependencies
         run: flutter pub get
