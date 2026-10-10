@@ -21,10 +21,10 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Set up Flutter SDK (Stable)
+      - name: Set up Flutter SDK (3.19.6)
         uses: subosito/flutter-action@v2
         with:
-          channel: 'stable'
+          flutter-version: '3.19.6'
           cache: true
 
       - name: Re-create Android Project
@@ -32,10 +32,17 @@ jobs:
           rm -rf android
           flutter create . --org com.renantefullo --project-name macro_auto_cleaner
 
-      - name: Update Workmanager Package via Flutter CLI
+      - name: Fix Material 3 Compatibility in Code
         run: |
-          flutter pub remove workmanager || true
-          flutter pub add 'workmanager:{"git":{"url":"https://github.com/fluttercommunity/flutter_workmanager.git","path":"packages/workmanager"}}'
+          python3 -c '
+          import os
+          if os.path.exists("lib/main.dart"):
+              with open("lib/main.dart", "r") as f:
+                  content = f.read()
+              content = content.replace("surfaceContainerHighest", "surfaceVariant")
+              with open("lib/main.dart", "w") as f:
+                  f.write(content)
+          '
 
       - name: Configure Desugaring and MultiDex
         run: |
