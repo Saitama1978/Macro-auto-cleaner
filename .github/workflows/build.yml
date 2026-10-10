@@ -21,16 +21,28 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Set up Flutter SDK (3.19.6)
+      - name: Set up Flutter SDK (Stable Channel)
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.6'
+          channel: 'stable'
           cache: true
 
       - name: Re-create Android Project
         run: |
           rm -rf android
           flutter create . --org com.renantefullo --project-name macro_auto_cleaner
+
+      - name: Fix SurfaceContainer Compatibility in Code
+        run: |
+          python3 -c '
+          import os
+          if os.path.exists("lib/main.dart"):
+              with open("lib/main.dart", "r") as f:
+                  content = f.read()
+              content = content.replace("surfaceContainerHighest", "surfaceVariant")
+              with open("lib/main.dart", "w") as f:
+                  f.write(content)
+          '
 
       - name: Configure Desugaring and MultiDex
         run: |
