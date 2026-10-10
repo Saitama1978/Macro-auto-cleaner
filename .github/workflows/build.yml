@@ -25,18 +25,19 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Set up Flutter SDK
+      - name: Set up Flutter SDK (3.19.6)
         uses: subosito/flutter-action@v2
         with:
-          channel: 'stable'
+          flutter-version: '3.19.6'
           cache: true
 
-      - name: Re-create Android Project & Configure Desugaring
+      - name: Re-create Android Project Structure
         run: |
           rm -rf android
           flutter create . --org com.renantefullo --project-name macro_auto_cleaner
-          
-          # Configure Desugaring & Java 8 via Python
+
+      - name: Configure Desugaring & Java 8 Compatibility
+        run: |
           python3 -c '
           import os
 
@@ -73,7 +74,7 @@ jobs:
       - name: Install Dependencies
         run: flutter pub get
 
-      - name: Build Android APK
+      - name: Build Release APK
         run: flutter build apk --release --no-tree-shake-icons
 
       - name: Upload APK Artifact
