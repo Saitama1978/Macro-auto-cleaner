@@ -36,9 +36,7 @@ jobs:
           rm -rf android
           flutter create . --org com.renantefullo --project-name macro_auto_cleaner
           
-          # Alisin muna ang workmanager sa pubspec.yaml kung nagdudulot ng error sa compilation
           python3 -c '
-          import yaml
           with open("pubspec.yaml", "r") as f:
               lines = f.readlines()
           
@@ -51,8 +49,8 @@ jobs:
               if skip and (line.startswith("  ") or line.strip() == ""):
                   continue
               else:
-              skip = False
-              new_lines.append(line)
+                  skip = False
+                  new_lines.append(line)
               
           with open("pubspec.yaml", "w") as f:
               f.writelines(new_lines)
