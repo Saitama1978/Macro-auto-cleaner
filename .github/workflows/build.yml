@@ -27,44 +27,19 @@ jobs:
           flutter-version: '3.19.6'
           cache: true
 
-      - name: Re-create Android Project Structure
+      - name: Re-create Android Project
         run: |
           rm -rf android
           flutter create . --org com.renantefullo --project-name macro_auto_cleaner
 
-      - name: Configure Gradle Properly (Desugaring, MultiDex & Dependencies)
+      - name: Configure Desugaring and MultiDex
         run: |
-          python3 -c '
-          import os
-
-          path_kts = "android/app/build.gradle.kts"
-          if os.path.exists(path_kts):
-              with open(path_kts, "r") as f:
-                  content = f.read()
-              
-              # 1. Enable coreLibraryDesugaring at Java compatibility
-              if "isCoreLibraryDesugaringEnabled" not in content:
-                  content = content.replace("compileOptions {", "compileOptions {\n        isCoreLibraryDesugaringEnabled = true\n        sourceCompatibility = JavaVersion.VERSION_1_8\n        targetCompatibility = JavaVersion.VERSION_1_8")
-              
-              # 2. Enable MultiDex
-              if "multiDexEnabled" not in content:
-                  content = content.replace("defaultConfig {", "defaultConfig {\n        multiDexEnabled = true")
-
-              # 3. Siguraduhing may dependencies block at nasa loob ang coreLibraryDesugaring at multidex
-              desugar_code = """
-dependencies {
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
-    implementation("androidx.multidex:multidex:2.0.1")
-}
-"""
-              if "coreLibraryDesugaring" not in content:
-                  content += desugar_code
-              elif "dependencies {" not in content:
-                  content += desugar_code
-
-              with open(path_kts, "w") as f:
-                  f.write(content)
-          '
+          BUILD_FILE="android/app/build.gradle.kts"
+          if [ -f "$BUILD_FILE" ]; then
+            sed -i '/compileOptions {/a \        isCoreLibraryDesugaringEnabled = true\n        sourceCompatibility = JavaVersion.VERSION_1_8\n        targetCompatibility = JavaVersion.VERSION_1_8' "$BUILD_FILE"
+            sed -i '/defaultConfig {/a \        multiDexEnabled = true' "$BUILD_FILE"
+            echo -e '\ndependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")\n    implementation("androidx.multidex:multidex:2.0.1")\n}' >> "$BUILD_FILE"
+          fi
 
       - name: Install Dependencies
         run: flutter pub get
@@ -76,4 +51,4 @@ dependencies {
         uses: actions/upload-artifact@v4
         with:
           name: MacroAutoCleaner-Release-APK
-          path: build/app/outputs/flutter-apk/app-release.apk  
+          path: build/app/outputs/flutter-apk/app-release.apk
