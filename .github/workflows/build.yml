@@ -31,35 +31,50 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Re-create Project & Clean Pubspec Workmanager
+      - name: Re-create Android Project & Configure Desugaring
         run: |
           rm -rf android
           flutter create . --org com.renantefullo --project-name macro_auto_cleaner
           
+          # Configure Desugaring & Java 8 via Python
           python3 -c '
-          with open("pubspec.yaml", "r") as f:
-              lines = f.readlines()
-          
-          new_lines = []
-          skip = False
-          for line in lines:
-              if "workmanager:" in line:
-                  skip = True
-                  continue
-              if skip and (line.startswith("  ") or line.strip() == ""):
-                  continue
-              else:
-                  skip = False
-                  new_lines.append(line)
+          import os
+
+          path_kts = "android/app/build.gradle.kts"
+          path_groovy = "android/app/build.gradle"
+
+          if os.path.exists(path_kts):
+              with open(path_kts, "r") as f:
+                  content = f.read()
               
-          with open("pubspec.yaml", "w") as f:
-              f.writelines(new_lines)
+              if "isCoreLibraryDesugaringEnabled" not in content:
+                  content = content.replace("compileOptions {", "compileOptions {\n        isCoreLibraryDesugaringEnabled = true\n        sourceCompatibility = JavaVersion.VERSION_1_8\n        targetCompatibility = JavaVersion.VERSION_1_8")
+              
+              if "coreLibraryDesugaring" not in content:
+                  content += "\ndependencies {\n    coreLibraryDesugaring(\"com.android.tools:desugar_jdk_libs:2.0.4\")\n}\n"
+                      
+              with open(path_kts, "w") as f:
+                  f.write(content)
+
+          elif os.path.exists(path_groovy):
+              with open(path_groovy, "r") as f:
+                  content = f.read()
+              
+              if "coreLibraryDesugaringEnabled" not in content:
+                  content = content.replace("compileOptions {", "compileOptions {\n        coreLibraryDesugaringEnabled true\n        sourceCompatibility JavaVersion.VERSION_1_8\n        targetCompatibility JavaVersion.VERSION_1_8")
+              
+              if "coreLibraryDesugaring" not in content:
+                  content += "\ndependencies {\n    coreLibraryDesugaring \"com.android.tools:desugar_jdk_libs:2.0.4\"\n}\n"
+                      
+              with open(path_groovy, "w") as f:
+                  f.write(content)
           '
 
-      - name: Install Dependencies & Build APK
-        run: |
-          flutter pub get
-          flutter build apk --release --no-tree-shake-icons
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build Android APK
+        run: flutter build apk --release --no-tree-shake-icons
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
