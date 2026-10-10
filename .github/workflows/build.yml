@@ -32,19 +32,10 @@ jobs:
           rm -rf android
           flutter create . --org com.renantefullo --project-name macro_auto_cleaner
 
-      - name: Patch Workmanager to Modern V2 Embedding
+      - name: Update Workmanager Package via Flutter CLI
         run: |
-          python3 -c '
-          with open("pubspec.yaml", "r") as f:
-              content = f.read()
-          
-          # Replace old workmanager version with git source
-          content = content.replace("workmanager: ^0.5.2", "workmanager:\n    git:\n      url: https://github.com/fluttercommunity/flutter_workmanager.git\n      path: packages/workmanager")
-          content = content.replace("workmanager: 0.5.2", "workmanager:\n    git:\n      url: https://github.com/fluttercommunity/flutter_workmanager.git\n      path: packages/workmanager")
-          
-          with open("pubspec.yaml", "w") as f:
-              f.write(content)
-          '
+          flutter pub remove workmanager || true
+          flutter pub add 'workmanager:{"git":{"url":"https://github.com/fluttercommunity/flutter_workmanager.git","path":"packages/workmanager"}}'
 
       - name: Configure Desugaring and MultiDex
         run: |
